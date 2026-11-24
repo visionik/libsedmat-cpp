@@ -51,6 +51,42 @@ $a/Appendix A/
 }
 ```
 
+## SEDMAT v3.7 Container Scopes (`@`)
+
+Target slides, sheets, tabs, pages, headers/footers, and named regions (`title`, `sub`, `body`, `notes`, `shape=N`):
+
+```cpp
+auto prog = sedmat::parse_program(R"(
+@1:{z=#0F172A transition=fade}
+@slide=2:title:s/.*/{c=navy}New Title/
+@2:notes:a/Pause for Q&A./
+@"Q4 Budget":s/USD/EUR/g
+@$a/{layout=two-col}Next Steps/
+@3{move=1}
+)");
+```
+
+## IntelliSense, Diagnostics & Syntax Tokenizer
+
+`libsedmat-cpp` includes a UI-agnostic, zero-dependency IntelliSense engine for editor command bars, TUIs, CLIs, and LSPs:
+
+```cpp
+sedmat::ContextInfo ctx;
+ctx.mode = sedmat::Profile::Slides;
+ctx.active_container = 2;
+
+// 1. Cursor-aware completions with capability profiles & host extensions
+auto res = sedmat::get_completions("s/foo/{c=re", 11, ctx);
+// res.suggestions[0].label == "red", swatch == "#FF0000"
+// res.ghost_suffix == "d"
+
+// 2. Non-throwing syntax tokenizer
+auto tokens = sedmat::tokenize("@2:title:s/foo/{b c=red}bar/gi");
+
+// 3. Structured diagnostics from parser errors
+auto diag = sedmat::extract_diagnostic("SEDMAT error at offset 9: Unclosed brace — add '}'");
+```
+
 ## Implementing a Custom Backend
 
 Subclass `sedmat::Backend` (`project`, `apply_text_plan`, `apply_address_mutations`, `apply_transliterate`, and optional `apply_container_op`) to connect SEDMAT to any rich document engine.
@@ -67,6 +103,12 @@ Subclass `sedmat::Backend` (`project`, `apply_text_plan`, `apply_address_mutatio
 ```bash
 make check   # cmake build + ctest
 ```
+
+## Related
+
+- **SEDMAT Website & Docs**: [https://sedmat.org](https://sedmat.org)
+- **SEDMAT Specification**: [https://github.com/visionik/sedmat](https://github.com/visionik/sedmat)
+- **Sibling Libraries**: [`libsedmat-go`](https://github.com/visionik/libsedmat-go) · [`libsedmat-ts`](https://github.com/visionik/libsedmat-ts) · [`libsedmat-rs`](https://github.com/visionik/libsedmat-rs) · [`libsedmat-py`](https://github.com/visionik/libsedmat-py)
 
 ## License
 
