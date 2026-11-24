@@ -98,6 +98,23 @@ Subclass `sedmat::Backend` (`project`, `apply_text_plan`, `apply_address_mutatio
 - Honor `BraceExpression::no_reset` (`{!0}`) for additive formatting vs. implicit reset default.
 - Conformance suite: `testdata/conformance/v3.6.json` (shared across Go, TS, Rust, Python, and C++).
 
+## Examples
+
+All examples have **zero external dependencies** (C++20 stdlib + POSIX sockets for the web demos):
+
+- **[`examples/lsp_server.cpp`](./examples/lsp_server.cpp)** — SEDMAT Language Server (LSP over stdio) with live diagnostics, profile-aware completions + color swatches, and semantic tokens:
+  ```bash
+  cmake -B build && cmake --build build && ./build/sedmat_lsp_server
+  ```
+- **[`examples/doc_playground.cpp`](./examples/doc_playground.cpp)** — Launch-a-web Document Playground (`http://127.0.0.1:4173`) with live syntax highlighting, IntelliSense dropdown, color swatches, ghost text, dry-run preview, and numbered document view:
+  ```bash
+  ./build/sedmat_doc_playground
+  ```
+- **[`examples/slide_deck.cpp`](./examples/slide_deck.cpp)** — Launch-a-web Slide Deck Studio (`http://127.0.0.1:4174`) demonstrating SEDMAT v3.7 `@` container scopes and Slides profile completions:
+  ```bash
+  ./build/sedmat_slide_deck
+  ```
+
 ## Development
 
 ```bash
