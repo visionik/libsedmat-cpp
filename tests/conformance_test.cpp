@@ -277,11 +277,91 @@ void test_v37_container_scopes_and_introspection() {
     std::cout << "PASS v3.7 container scopes, dry-run, and introspection\n";
 }
 
+void test_intellisense() {
+    auto diag = sedmat::extract_diagnostic(
+        "SEDMAT error at offset 9: Unclosed brace expression \xE2\x80\x94 add a closing '}'");
+    assert(!diag.ok);
+    assert(diag.error_offset.has_value() && *diag.error_offset == 9);
+    assert(diag.error_length == 1);
+    assert(diag.summary == "Unclosed brace expression");
+    assert(diag.hint.has_value() && *diag.hint == "add a closing '}'");
+
+    auto doc = sedmat::get_completions("s/foo/{", 7);
+    bool has_bold = false;
+    bool has_transition = false;
+    for (const auto& s : doc.suggestions) {
+        if (s.label == "b") has_bold = true;
+        if (s.label == "transition=") has_transition = true;
+    }
+    assert(has_bold);
+    assert(!has_transition);
+
+    sedmat::ContextInfo slides_ctx;
+    slides_ctx.mode = sedmat::Profile::Slides;
+    slides_ctx.active_container = 3;
+    auto slides = sedmat::get_completions("s/foo/{tr", 9, slides_ctx);
+    bool slides_has_transition = false;
+    for (const auto& s : slides.suggestions) {
+        if (s.label == "transition=") slides_has_transition = true;
+    }
+    assert(slides_has_transition);
+
+    auto at_res = sedmat::get_completions("@", 1, slides_ctx);
+    assert(at_res.ghost_suffix.has_value() && *at_res.ghost_suffix == "3:");
+
+    auto colors = sedmat::get_completions("s/foo/{c=", 9);
+    std::string green_swatch;
+    std::string orange_swatch;
+    for (const auto& s : colors.suggestions) {
+        if (s.label == "green" && s.swatch) green_swatch = *s.swatch;
+        if (s.label == "orange" && s.swatch) orange_swatch = *s.swatch;
+    }
+    assert(green_swatch == "#00FF00");
+    assert(orange_swatch == "#FF8C00");
+
+    auto chained = sedmat::get_completions("s/a/b/g; s/c/{c=re", 18);
+    assert(!chained.suggestions.empty() && chained.suggestions[0].label == "red");
+    assert(chained.ghost_suffix.has_value() && *chained.ghost_suffix == "d");
+
+    sedmat::IntelliSenseExtensions ext;
+    ext.flags.push_back({"brand=", "brand=", "Custom brand flag", {}});
+    ext.values["brand"] = {{"acme", "Acme primary", "#123456"}};
+    sedmat::ContextInfo ext_ctx;
+    ext_ctx.extensions = ext;
+    auto ext_val = sedmat::get_completions("s/x/{brand=", 11, ext_ctx);
+    assert(!ext_val.suggestions.empty() && ext_val.suggestions[0].label == "acme");
+    assert(ext_val.suggestions[0].swatch == "#123456");
+
+    std::string expr = "@2:title:s/foo/{b c=red}bar/gi";
+    auto tokens = sedmat::tokenize(expr);
+    std::string rebuilt;
+    bool has_scope = false, has_brace = false, has_text = false, has_flag = false;
+    for (const auto& t : tokens) {
+        rebuilt += t.text;
+        if (t.kind == sedmat::TokenKind::Scope && t.text == "@2:title:") has_scope = true;
+        if (t.kind == sedmat::TokenKind::Brace && t.text == "{b c=red}") has_brace = true;
+        if (t.kind == sedmat::TokenKind::Text && t.text == "bar") has_text = true;
+        if (t.kind == sedmat::TokenKind::Flag && t.text == "gi") has_flag = true;
+    }
+    assert(rebuilt == expr);
+    assert(has_scope && has_brace && has_text && has_flag);
+
+    std::string inc = "# comment\n@1:s/unclosed/{b c=";
+    auto inc_tokens = sedmat::tokenize(inc);
+    std::string inc_rebuilt;
+    for (const auto& t : inc_tokens) inc_rebuilt += t.text;
+    assert(inc_rebuilt == inc);
+    assert(!inc_tokens.empty() && inc_tokens[0].kind == sedmat::TokenKind::Comment);
+
+    std::cout << "PASS intellisense completions, diagnostics, and tokenizer\n";
+}
+
 } // namespace
 
 int main() {
     test_conformance_v36_json();
     test_ported_sed_fixtures();
     test_v37_container_scopes_and_introspection();
+    test_intellisense();
     return 0;
 }

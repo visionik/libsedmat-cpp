@@ -4,6 +4,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace sedmat {
@@ -312,5 +313,116 @@ public:
 private:
     Backend& backend_;
 };
+
+// --- IntelliSense / Diagnostics / Syntax Tokenizer ---
+
+enum class SuggestionKind {
+    Scope,
+    Command,
+    Flag,
+    Value,
+    Snippet
+};
+
+enum class Profile {
+    Document,
+    Word,
+    Slides,
+    Spreadsheet,
+    Vector,
+    Timeline,
+    All
+};
+
+struct Suggestion {
+    std::string label;
+    std::string insert_text;
+    std::size_t replace_from = 0;
+    std::size_t replace_to = 0;
+    std::string detail;
+    SuggestionKind kind = SuggestionKind::Snippet;
+    std::optional<std::string> swatch;
+};
+
+struct SignaturePart {
+    std::string text;
+    bool active = false;
+};
+
+struct IntelliSenseResult {
+    std::string context_title;
+    std::vector<SignaturePart> signature;
+    std::vector<Suggestion> suggestions;
+    std::optional<std::string> ghost_suffix;
+};
+
+struct FlagDefinition {
+    std::string key;
+    std::string insert;
+    std::string detail;
+    std::vector<Profile> profiles;
+};
+
+struct ValueOption {
+    std::string value;
+    std::string detail;
+    std::optional<std::string> swatch;
+};
+
+struct SnippetOption {
+    std::string label;
+    std::string insert;
+    std::string detail;
+    SuggestionKind kind = SuggestionKind::Snippet;
+    std::optional<std::string> swatch;
+};
+
+struct IntelliSenseExtensions {
+    std::vector<FlagDefinition> flags;
+    std::unordered_map<std::string, std::vector<ValueOption>> values;
+    std::vector<SnippetOption> starters;
+    std::vector<SnippetOption> scope_snippets;
+};
+
+struct ContextInfo {
+    Profile mode = Profile::Document;
+    std::optional<std::size_t> active_container;
+    std::optional<std::size_t> total_containers;
+    std::optional<std::size_t> active_slide;
+    std::optional<std::size_t> total_slides;
+    std::optional<IntelliSenseExtensions> extensions;
+};
+
+struct Diagnostic {
+    bool ok = false;
+    std::string summary;
+    std::optional<std::size_t> error_offset;
+    std::size_t error_length = 0;
+    std::optional<std::string> hint;
+};
+
+enum class TokenKind {
+    Comment,
+    Scope,
+    Address,
+    Command,
+    Delimiter,
+    Pattern,
+    Brace,
+    Text,
+    Flag,
+    Whitespace
+};
+
+struct Token {
+    TokenKind kind = TokenKind::Text;
+    std::size_t start = 0;
+    std::size_t end = 0;
+    std::string text;
+};
+
+Diagnostic extract_diagnostic(const std::string& error_message);
+IntelliSenseResult get_completions(const std::string& input, std::size_t cursor, const ContextInfo& ctx = {});
+std::vector<Token> tokenize(const std::string& input);
 
 } // namespace sedmat
